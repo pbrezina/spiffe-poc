@@ -1,0 +1,5 @@
+--unattended
+--realm=IPA.EXAMPLE.ORG
+--ds-password=Secret123
+--admin-password=Secret123
+--no-ntp

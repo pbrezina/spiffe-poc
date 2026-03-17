@@ -1,0 +1,92 @@
+services:
+  spire-server:
+    image: ghcr.io/spiffe/spire-server:1.14.2
+    hostname: spire-server
+    container_name: spire-server
+    volumes:
+      - ./certs:/certs
+      - ./spire/server:/opt/spire/conf/server
+      - spire-server-data:/opt/spire/conf/server/data
+      - spire-server-socket:/tmp/spire-server
+    command: ["-config", "/opt/spire/conf/server/server.conf"]
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "/opt/spire/bin/spire-server", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 2s
+
+  spire-agent:
+    image: ghcr.io/spiffe/spire-agent:1.14.2
+    hostname: spire-agent
+    container_name: spire-agent
+    depends_on:
+      spire-server:
+        condition: service_healthy
+    volumes:
+      - ./certs:/certs
+      - ./spire/agent:/opt/spire/conf/agent
+      - spire-agent-socket:/tmp/spire-agent
+    command: ["-config", "/opt/spire/conf/agent/agent.conf"]
+    pid: "host"
+    healthcheck:
+      test: ["CMD", "/opt/spire/bin/spire-agent", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ipa:
+    build:
+      context: ./ipa
+      dockerfile: Dockerfile
+    hostname: ipa.example.org
+    container_name: ipa
+    volumes:
+      - ipa-data:/data
+      - ./certs:/certs
+      - ./ipa/ipa-server-install-options:/data/ipa-server-install-options
+      - ./ipa/99-ssh-gssapi.conf:/etc/ssh/sshd_config.d/99-ssh-gssapi.conf
+    cap_add:
+      - SETGID
+      - SETUID
+      - SETPCAP
+      - DAC_READ_SEARCH
+      - DAC_OVERRIDE
+    security_opt:
+    - apparmor=unconfined
+    - label=disable
+    - seccomp=unconfined
+    healthcheck:
+      test: ["CMD", "ipactl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 60 # First time up requires lots of time to install the server
+
+  mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    container_name: mcp
+    depends_on:
+      spire-agent:
+        condition: service_healthy
+      ipa:
+        condition: service_healthy
+    volumes:
+      - ./certs:/certs
+      - ./mcp:/mcp
+      - ./spire:/spire
+      - spire-agent-socket:/tmp/spire-agent
+      - ipa-data:/ipa-data
+    dns_search:
+      - example.org
+    environment:
+      - SPIFFE_ENDPOINT_SOCKET=unix:///tmp/spire-agent/public/api.sock
+
+volumes:
+  spire-server-data:
+  spire-server-socket:
+  spire-agent-socket:
+  ipa-data:

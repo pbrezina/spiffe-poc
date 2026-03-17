@@ -1,0 +1,9 @@
+# Ignore all contents of data directory
+data/*
+
+# Except for ipa-server-install-options
+!data/ipa/ipa-server-install-options
+
+# Ignore ephemeral certificates
+certs/tmp/*
+!certs/tmp/.gitkeep

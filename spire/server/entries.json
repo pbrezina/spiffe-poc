@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "parent_id": "spiffe://example.org/spire/agent/x509pop/6fab2f89f1c80d6b61ed466815ff02f345a46e41",
+      "spiffe_id": "spiffe://example.org/mcp",
+      "selectors": [
+        { "type": "unix", "value": "user:root" }
+      ]
+    }
+  ]
+}
