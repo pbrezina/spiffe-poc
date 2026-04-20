@@ -9,8 +9,9 @@ import gssapi
 import krb5
 import paramiko
 from cryptography.hazmat.primitives import serialization
-from cryptography.x509 import SubjectAlternativeName, UniformResourceIdentifier
+import cryptography.x509
 from spiffe import WorkloadApiClient
+import ipalib.x509_attestation
 
 
 def fetch_svid():
@@ -33,9 +34,11 @@ def fetch_svid():
 
         # Extract SPIFFE ID from SAN
         try:
-            san = cert.extensions.get_extension_for_class(SubjectAlternativeName)
+            san = cert.extensions.get_extension_for_class(
+                cryptography.x509.SubjectAlternativeName
+            )
             for name in san.value:
-                if isinstance(name, UniformResourceIdentifier):
+                if isinstance(name, cryptography.x509.UniformResourceIdentifier):
                     if name.value.startswith("spiffe://"):
                         print(f"SPIFFE ID from SAN: {name.value}")
         except Exception as e:
@@ -190,6 +193,60 @@ def acquire_s4u_ticket(mcp_principal, user_principal, host_principal, s4u_ccache
     # print(f"Security context established for {user_principal} -> {host_principal}")
 
 
+def ipa_build_attestation_cert(
+    svc_type, svc_hostname, svc_pubkey_path, svc_keytab_path, realm, user
+):
+    print(f"=== Building S4U attestation certificate ===")
+
+    keytab_entry = ipalib.x509_attestation.get_host_keytab_key(
+        hostname=svc_hostname,
+        service_type=svc_type,
+        keytab_path=svc_keytab_path,
+        realm=realm,
+    )
+
+    with open(svc_pubkey_path, "rb") as f:
+        cert = cryptography.x509.load_pem_x509_certificate(f.read())
+        pubkey = cert.public_key()
+
+    cert_der = ipalib.x509_attestation.build_service_attestation_cert(
+        user=user,
+        realm=realm,
+        service_type=svc_type,
+        host_pubkey=pubkey,
+        keytab_entry=keytab_entry,
+        authn_context_ext="mcp:oauth2",  # omit — emits "unknown" (authn indicator)
+    )
+
+    return cert_der
+
+
+def ipa_acquire_s4u2self_ticket(mcp_principal, cert, s4u_ccache):
+    # GSS_KRB5_NT_X509_CERT: 1.2.840.113554.1.2.2.7
+    # Imports raw X.509 cert DER as a Kerberos principal name for PA-FOR-X509-USER.
+    GSS_KRB5_NT_X509_CERT = gssapi.OID.from_int_seq([1, 2, 840, 113554, 1, 2, 2, 7])
+
+    print(f"=== Acquiring S4U2Self ticket with IPA attestation cert ===")
+
+    service_name = gssapi.Name(mcp_principal, gssapi.NameType.kerberos_principal)
+    cert_name = gssapi.Name(cert, name_type=GSS_KRB5_NT_X509_CERT)
+
+    # Get our service credentials (already acquired with keytab)
+    service_creds = gssapi.Credentials(name=service_name, usage="initiate")
+    print(f"Service credentials acquired for: {service_name}")
+
+    # S4U2Self: Acquire a ticket for the user to our service
+    user_creds = service_creds.impersonate(cert_name)
+    user_creds.store({"ccache": s4u_ccache}, overwrite=True)
+    os.environ["KRB5CCNAME"] = s4u_ccache
+
+    user_principal = str(user_creds.name)
+
+    print(f"Successfully acquired S4U2Self ticket for {user_principal}")
+    print(f"S4U2Self credential lifetime: {user_creds.lifetime} seconds")
+    print(f"S4U2Self ticket successfully written to cache: {s4u_ccache}")
+
+
 def paramiko_exec(ssh, command):
     """
     Execute command over ssh.
@@ -283,12 +340,25 @@ def main():
             continue
 
         try:
-            acquire_s4u_ticket(
-                "mcp/mcp.ipa.example.org@IPA.EXAMPLE.ORG",
-                "admin@IPA.EXAMPLE.ORG",
-                "host/ipa.example.org@IPA.EXAMPLE.ORG",
-                "MEMORY:s4u2proxy",
+            # acquire_s4u_ticket(
+            #     "mcp/mcp.ipa.example.org@IPA.EXAMPLE.ORG",
+            #     "admin@IPA.EXAMPLE.ORG",
+            #     "host/ipa.example.org@IPA.EXAMPLE.ORG",
+            #     "MEMORY:s4u2proxy",
+            # )
+            cert = ipa_build_attestation_cert(
+                svc_type="mcp",
+                svc_hostname="mcp.ipa.example.org",
+                svc_pubkey_path="/certs/mcp.crt",
+                svc_keytab_path="/certs/tmp/mcp.keytab",
+                realm="IPA.EXAMPLE.ORG",
+                user="admin",
             )
+
+            ipa_acquire_s4u2self_ticket(
+                "mcp/mcp.ipa.example.org@IPA.EXAMPLE.ORG", cert, "MEMORY:s4u2proxy"
+            )
+
         except Exception as e:
             print(f"Error getting S4U tickets: {e}")
             podman_wait()

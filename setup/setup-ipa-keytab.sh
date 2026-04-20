@@ -16,6 +16,7 @@ echo "Secret123" | podman exec -i ipa kinit admin
 # Create service principal that can acquire S4U tickets
 podman exec ipa ipa host-add mcp.ipa.example.org --force
 podman exec ipa ipa service-add mcp/mcp.ipa.example.org --ok-to-auth-as-delegate=true --force
+podman exec ipa ipa service-add-attestation-key mcp/mcp.ipa.example.org --type="mcp" --pubkey=/certs/mcp.crt
 podman exec ipa ipa-getkeytab -s ipa.example.org -p mcp/mcp.ipa.example.org -k /certs/tmp/mcp.keytab
 
 # Setup S4U2Proxy delegation mcp -> ipa server

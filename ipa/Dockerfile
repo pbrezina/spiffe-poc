@@ -5,7 +5,7 @@ FROM quay.io/freeipa/freeipa-server:fedora-rawhide
 
 RUN cp -a /data-template/. /data/ && \
     mkdir -p /tmp/var/tmp && \
-    dnf copr enable -y abbra/s4u-test && \
+    dnf copr enable -y pbrezina/s4u && \
     dnf install -y openssh-server sssd-kcm oddjob oddjob-mkhomedir && \
     dnf upgrade -y freeipa-server && \
     dnf clean all && \
@@ -16,3 +16,6 @@ RUN cp -a /data-template/. /data/ && \
 
 # Copy sssd.conf with correct ownership and permissions
 COPY --chown=root:sssd --chmod=640 sssd.conf /data-template/etc/sssd/sssd.conf
+
+# Copy login.defs to override UID_MAX and GID_MAX
+COPY --chown=root:root --chmod=644 login.defs /etc/login.defs

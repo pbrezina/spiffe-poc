@@ -5,8 +5,13 @@ RUN dnf install -y python3 python3-pip gcc python3-devel \
         krb5-workstation krb5-devel openssl openssh-clients && \
     dnf clean all
 
+# Install IPA lib
+RUN dnf copr enable -y pbrezina/s4u && \
+    dnf install -y python3-ipalib && \
+    dnf clean all
+
 # Create virtual environment
-RUN python3 -m venv /opt/venv
+RUN python3 -m venv --system-site-packages /opt/venv
 
 # Install Python dependencies
 RUN /opt/venv/bin/pip3 install --no-cache-dir spiffe gssapi krb5 paramiko
