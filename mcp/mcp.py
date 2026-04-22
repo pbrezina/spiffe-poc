@@ -343,7 +343,7 @@ def main():
             # acquire_s4u_ticket(
             #     "mcp/mcp.example.org@EXAMPLE.ORG",
             #     "admin@EXAMPLE.ORG",
-            #     "host/ipa.example.org@EXAMPLE.ORG",
+            #     "host/staging.example.org@EXAMPLE.ORG",
             #     "MEMORY:s4u2proxy",
             # )
             cert = ipa_build_attestation_cert(
@@ -366,7 +366,7 @@ def main():
             continue
 
         try:
-            paramiko_run("ipa.example.org", "admin")
+            paramiko_run("staging.example.org", "admin")
         except Exception as e:
             print(f"SSH Connection Failed: {e}")
             podman_wait()
