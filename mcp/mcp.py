@@ -132,7 +132,7 @@ def acquire_tgt_with_keytab(principal_name, keytab_path, ccache_path):
     Acquire TGT using a keytab with GSSAPI.
 
     Args:
-        principal_name: Kerberos principal (e.g., 'mcp@IPA.EXAMPLE.ORG')
+        principal_name: Kerberos principal (e.g., 'mcp@EXAMPLE.ORG')
         keytab_path: Path to the keytab file
         ccache_path: Path to credential cache (e.g., 'MEMORY:ccache')
     """
@@ -215,7 +215,7 @@ def ipa_build_attestation_cert(
         service_type=svc_type,
         host_pubkey=pubkey,
         keytab_entry=keytab_entry,
-        authn_context_ext="mcp:oauth2",  # omit — emits "unknown" (authn indicator)
+        authn_context_ext=None,  # omit — emits "unknown" (authn indicator)
     )
 
     return cert_der
@@ -326,11 +326,11 @@ def main():
             # Perform PKINIT authentication
             # Currently not possible with service principal.
             # try:
-            #     acquire_tgt_with_pkinit('mcp@IPA.EXAMPLE.ORG', cert_file, key_file, "MEMORY:ccache")
+            #     acquire_tgt_with_pkinit('mcp@EXAMPLE.ORG', cert_file, key_file, "MEMORY:ccache")
             # except Exception as auth_error:
             #     print(f"PKINIT authentication failed: {auth_error}")
             acquire_tgt_with_keytab(
-                "mcp/mcp.ipa.example.org@IPA.EXAMPLE.ORG",
+                "mcp/mcp.example.org@EXAMPLE.ORG",
                 "/certs/tmp/mcp.keytab",
                 "MEMORY:ccache",
             )
@@ -341,26 +341,27 @@ def main():
 
         try:
             # acquire_s4u_ticket(
-            #     "mcp/mcp.ipa.example.org@IPA.EXAMPLE.ORG",
-            #     "admin@IPA.EXAMPLE.ORG",
-            #     "host/ipa.example.org@IPA.EXAMPLE.ORG",
+            #     "mcp/mcp.example.org@EXAMPLE.ORG",
+            #     "admin@EXAMPLE.ORG",
+            #     "host/ipa.example.org@EXAMPLE.ORG",
             #     "MEMORY:s4u2proxy",
             # )
             cert = ipa_build_attestation_cert(
                 svc_type="mcp",
-                svc_hostname="mcp.ipa.example.org",
+                svc_hostname="mcp.example.org",
                 svc_pubkey_path="/certs/mcp.crt",
                 svc_keytab_path="/certs/tmp/mcp.keytab",
-                realm="IPA.EXAMPLE.ORG",
+                realm="EXAMPLE.ORG",
                 user="admin",
             )
 
             ipa_acquire_s4u2self_ticket(
-                "mcp/mcp.ipa.example.org@IPA.EXAMPLE.ORG", cert, "MEMORY:s4u2proxy"
+                "mcp/mcp.example.org@EXAMPLE.ORG", cert, "MEMORY:s4u2proxy"
             )
 
         except Exception as e:
             print(f"Error getting S4U tickets: {e}")
+            raise
             podman_wait()
             continue
 

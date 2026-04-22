@@ -68,6 +68,7 @@ services:
     build:
       context: ./mcp
       dockerfile: Dockerfile
+    hostname: mcp.example.org
     container_name: mcp
     depends_on:
       spire-agent:

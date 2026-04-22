@@ -7,7 +7,7 @@ RUN cp -a /data-template/. /data/ && \
     mkdir -p /tmp/var/tmp && \
     dnf copr enable -y pbrezina/s4u && \
     dnf install -y openssh-server sssd-kcm oddjob oddjob-mkhomedir && \
-    dnf upgrade -y freeipa-server && \
+    dnf upgrade -y freeipa-server sssd\* && \
     dnf clean all && \
     authselect enable-feature with-gssapi && \
     authselect enable-feature with-mkhomedir && \
