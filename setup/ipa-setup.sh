@@ -23,6 +23,7 @@ podman exec -i staging ipa-client-install \
 podman cp staging/sssd.conf staging:/etc/sssd/sssd.conf
 podman exec staging chown root:sssd /etc/sssd/sssd.conf
 podman exec staging chmod 640 /etc/sssd/sssd.conf
+podman exec staging systemctl restart sssd
 
 # Enable with-gssapi with authselect
 podman exec staging authselect select sssd with-gssapi with-mkhomedir with-sudo --force

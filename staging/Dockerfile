@@ -13,6 +13,7 @@ RUN authselect select sssd with-gssapi with-mkhomedir --force
 RUN systemctl enable sshd sssd-kcm.socket oddjobd
 
 COPY 99-ssh-gssapi.conf /etc/ssh/sshd_config.d/99-ssh-gssapi.conf
+COPY --chmod=755 --chown=root:root sss-confined-shell /usr/bin/sss-confined-shell
 
 RUN sed -i -e 's/^UID_MIN.*/UID_MIN 1000/' \
            -e 's/^UID_MAX.*/UID_MAX 2000/' \

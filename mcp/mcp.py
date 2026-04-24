@@ -285,6 +285,9 @@ def paramiko_run(hostname, user):
 
         print(f"Successfully connected to {hostname} as {user} via SSH with GSSAPI")
 
+        # Show identity used to login
+        paramiko_exec(ssh, "whoami")
+
         # Show who we are
         paramiko_exec(ssh, "id")
 
@@ -366,7 +369,10 @@ def main():
             continue
 
         try:
-            paramiko_run("staging.example.org", "admin")
+            paramiko_run(
+                "staging.example.org",
+                "BOT-eyJuIjoiYWRtaW4iLCJyIjoiMTIzNDU2Nzg5IiwiYSI6ImNsYXVkZSIsIm0iOiJvcHVzIiwidCI6InJoZWwtbWNwIn0=@EXAMPLE.ORG",
+            )
         except Exception as e:
             print(f"SSH Connection Failed: {e}")
             podman_wait()

@@ -59,6 +59,8 @@ services:
       dockerfile: Dockerfile
     hostname: staging.example.org
     container_name: staging
+    volumes:
+      - ./staging/sss-confined-shell:/usr/bin/sss-confined-shell
     cap_add:
       # For SSSD to work
       - SETGID
